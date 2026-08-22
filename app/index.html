@@ -66,8 +66,9 @@
   .live{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ember2);font-weight:700;margin-bottom:8px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 0 rgba(255,138,61,.6);animation:pulse 1.8s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,138,61,.55)}70%{box-shadow:0 0 0 10px rgba(255,138,61,0)}100%{box-shadow:0 0 0 0 rgba(255,138,61,0)}}
-  .bignum{font-size:48px;font-weight:800;color:var(--warm);line-height:1.1}
-  .bignum span{font-size:15px;color:var(--muted);font-weight:600}
+  .bignum{font-weight:800;color:var(--warm);line-height:1.1}
+  .bignum .num{font-size:64px;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+  .bignum .unit{font-size:16px;color:var(--muted);font-weight:600;margin-left:2px}
 
   .temp-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px}
   .temp-val{font-size:21px;font-weight:800;color:var(--text)}
@@ -141,7 +142,7 @@
       </div>
       <div class="card" id="greetEdit" style="display:none;padding:13px 16px">
         <div style="font-size:12px;color:var(--muted)">문장 카드와 "지금 읽는 중" 명단에 보이는 이름이에요. 실명 대신 닉네임을 써주세요.</div>
-        <input class="inp" id="nickInput2" maxlength="12" placeholder="닉네임" />
+        <input class="inp" id="nickInput2" maxlength="12" autocomplete="off" placeholder="닉네임" />
         <button class="btn sm" style="width:100%;margin-top:8px" onclick="saveNickTop()">저장</button>
       </div>
       <div class="scr-title">10분 독서방</div>
@@ -157,8 +158,8 @@
       <div class="card glow" id="sentenceCard" style="display:none">
         <div style="font-size:15px;font-weight:700">오늘의 한 문장</div>
         <div style="font-size:12px;color:var(--muted);margin-top:3px">방금 읽은 부분에서 마음에 남은 문장 하나만 남겨요.</div>
-        <textarea class="sentbox" id="sentInput" maxlength="200" placeholder="예) 행복은 강도가 아니라 빈도다."></textarea>
-        <input class="inp" id="quoteBook" maxlength="30" placeholder="어느 책이에요?" />
+        <textarea class="sentbox" id="sentInput" maxlength="200" autocomplete="off" placeholder="예) 행복은 강도가 아니라 빈도다."></textarea>
+        <input class="inp" id="quoteBook" maxlength="30" autocomplete="off" placeholder="어느 책이에요?" />
         <button class="btn" onclick="saveSentence()">문장 남기고 오늘 독서 완료</button>
         <div class="sent-hint">문장은 이 기기에만 저장돼요. 서버로 전송되지 않아요.</div>
       </div>
@@ -171,7 +172,7 @@
       <div class="card" id="roomForm" style="display:none">
         <div style="font-size:15px;font-weight:700">내 방 열기</div>
         <div style="font-size:12px;color:var(--muted);margin-top:3px">내가 읽으려고 여는 방이에요. 시작 시각부터 1시간 운영되고, 그 사이 언제든 들어와 10분을 읽어요.</div>
-        <input class="inp" id="roomName" maxlength="20" placeholder="방 이름 (예: 퇴근길 소설방)" />
+        <input class="inp" id="roomName" maxlength="20" autocomplete="off" placeholder="방 이름 (예: 퇴근길 소설방)" />
         <div class="label" style="margin:10px 0 4px">시작 시간</div>
         <input class="inp" id="roomTime" type="time" value="19:00" style="margin-top:0" />
         <button class="btn" onclick="createRoom()">이 시간에 방 올리기</button>
@@ -216,7 +217,14 @@
 
       <div class="card glow" style="text-align:center">
         <div class="label" style="margin:0 0 6px">내가 모은 문장</div>
-        <div class="bignum"><span id="dashQuotes">0</span><span> 개</span></div>
+        <div class="bignum"><span class="num" id="dashQuotes">0</span><span class="unit">개</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">읽은 시간이 아니라, 읽은 문장이 남아요</div>
+      </div>
+
+      <div class="card" style="text-align:center">
+        <div class="label" style="margin:0 0 6px">연속 참여</div>
+        <div class="bignum"><span class="num" id="dashStreak">0</span><span class="unit">일</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px" id="dashStreakLine"></div>
       </div>
 
       <div class="card">
@@ -257,7 +265,7 @@
       <div class="card" style="padding:13px 16px">
         <div style="font-size:14px;font-weight:700">닉네임</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">문장 카드와 명단에 보이는 이름 — 실명 대신 닉네임을 써주세요</div>
-        <input class="inp" id="nickInput" maxlength="12" placeholder="예) 시온" />
+        <input class="inp" id="nickInput" maxlength="12" autocomplete="off" placeholder="예) 시온" />
         <button class="btn sm ghost" style="width:100%;margin-top:8px" onclick="saveNick()">저장</button>
       </div>
 
@@ -465,11 +473,14 @@
     tInt = setInterval(renderTimer, 250);
     document.querySelector('.screens').scrollTop = 0;
   }
+  var lastElapsedSec = 0; // 이번 세션의 실제 읽은 시간 (조기 마무리 반영)
   function finishSprint(natural){
     clearInterval(tInt); tInt = null;
     releaseWake();
     untrackReading();
     if (!state.endAt) return;
+    var startedAt = state.endAt - SESSION_SEC * 1000;
+    lastElapsedSec = Math.max(1, Math.min(SESSION_SEC, Math.round((Date.now() - startedAt) / 1000)));
     state.endAt = null; saveState();
     if (natural === true) notifyEnd();
     document.getElementById('timerView').textContent = '완료';
@@ -665,10 +676,11 @@
       input.focus(); return;
     }
     state.quotes.unshift({ q: q, ts: Date.now(), book: book });
-    state.sessions.push({ ts: Date.now() });
+    state.sessions.push({ ts: Date.now(), dur: lastElapsedSec || SESSION_SEC });
     state.readDate = todayKey();
     saveState();
     input.value = '';
+    document.getElementById('quoteBook').value = '';
     document.getElementById('sentenceCard').style.display = 'none';
     document.getElementById('timerCard').style.display = 'none';
     document.getElementById('soloBtn').style.display = 'block';
@@ -868,8 +880,30 @@
       : '지난주 ' + lastWeek + '회 · 다시 불씨 살리면 돼요';
     var segs2 = document.getElementById('dashWeekBar').children;
     for (var k = 0; k < segs2.length; k++){ segs2[k].className = k < Math.min(thisWeek, 5) ? 'on' : ''; }
-    var mins = Math.round(state.sessions.length * SESSION_SEC / 60);
+    // 함께 읽은 시간 — 세션별 실제 경과 시간 합산 (조기 마무리 반영, 구 기록은 10분으로 간주)
+    var totalSec = state.sessions.reduce(function(a, s){ return a + (s.dur || 600); }, 0);
+    var mins = Math.round(totalSec / 60);
     document.getElementById('dashTimeLine').innerHTML = mins + '<span>분</span><span> · ' + state.sessions.length + '세션</span>';
+    // 연속 참여 (하루 1회 이상 = 1일, 건너뛰면 리셋)
+    var st = streakDays();
+    document.getElementById('dashStreak').textContent = st;
+    document.getElementById('dashStreakLine').textContent =
+      st === 0 ? '오늘 10분이 첫 불씨예요'
+      : readToday() ? '하루 한 번이면 이어져요 — 내일도 10분'
+      : '오늘 읽으면 ' + (st + 1) + '일째 — 하루 쉬면 다시 1일부터';
+  }
+  function dayKeyOf(ts){
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + two(d.getMonth()+1) + '-' + two(d.getDate());
+  }
+  function streakDays(){
+    var days = {};
+    state.sessions.forEach(function(s){ days[dayKeyOf(s.ts)] = true; });
+    var d = new Date(); d.setHours(12, 0, 0, 0);
+    if (!days[dayKeyOf(d.getTime())]) d.setDate(d.getDate() - 1); // 오늘 아직이면 어제까지의 연속
+    var n = 0;
+    while (days[dayKeyOf(d.getTime())]){ n++; d.setDate(d.getDate() - 1); }
+    return n;
   }
 
   // ================== 초기화 ==================

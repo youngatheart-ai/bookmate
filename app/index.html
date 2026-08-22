@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#15110d" />
+<meta name="description" content="북메이트 — 정해진 시간에 10분, 각자의 책. 읽은 시간이 아니라 읽은 문장이 남는다." />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="북메이트" />
+<title>북메이트 — 10분 독서방</title>
+<style>
+  :root{
+    --bg:#15110d;
+    --panel:#1f1813;
+    --panel2:#2a201a;
+    --line:#3a2c22;
+    --text:#f3ece4;
+    --muted:#a8978a;
+    --ember:#ff8a3d;
+    --ember2:#ffb066;
+    --warm:#ffd9a8;
+    --green:#7fd19a;
+    --field:#181009;
+    --track:#3a2417;
+    --tabbg:#120d09;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    display:flex;flex-direction:column;
+    min-height:100vh;min-height:100dvh;
+    letter-spacing:-0.01em;
+  }
+  .topbar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+    padding:calc(env(safe-area-inset-top, 0px) + 14px) 20px 8px;font-size:13px;color:var(--muted)}
+  .topbar .brand{font-weight:800;color:var(--warm);font-size:15px}
+  .topbar .beta{font-size:10px;color:var(--ember2);border:1px solid var(--line);border-radius:999px;
+    padding:2px 8px;margin-left:6px;vertical-align:2px}
+
+  .screens{flex:1;position:relative;overflow:hidden}
+  .screen{position:absolute;inset:0;overflow-y:auto;padding:6px 18px 26px;
+    opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .28s, transform .28s}
+  .screen.active{opacity:1;transform:none;pointer-events:auto}
+  .screen::-webkit-scrollbar{width:0}
+
+  .scr-title{font-size:21px;font-weight:800;margin:8px 0 2px}
+  .scr-sub{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:13px}
+  .card.glow{background:linear-gradient(160deg,#2a1c11,#1d150f);
+    box-shadow:0 0 0 1px rgba(255,138,61,.18), 0 14px 30px rgba(255,138,61,.08)}
+
+  .live{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ember2);font-weight:700;margin-bottom:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 0 rgba(255,138,61,.6);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,138,61,.55)}70%{box-shadow:0 0 0 10px rgba(255,138,61,0)}100%{box-shadow:0 0 0 0 rgba(255,138,61,0)}}
+  .bignum{font-size:48px;font-weight:800;color:var(--warm);line-height:1.1}
+  .bignum span{font-size:15px;color:var(--muted);font-weight:600}
+
+  .temp-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px}
+  .temp-val{font-size:21px;font-weight:800;color:var(--text)}
+  .statval{font-size:21px;font-weight:800;color:var(--text)}
+  .statval span{font-size:12px;color:var(--muted);font-weight:600;margin-left:2px}
+  .segbar{display:flex;gap:3px;height:10px}
+  .segbar i{flex:1;border-radius:3px;background:var(--track)}
+  .segbar i.on{background:var(--ember)}
+
+  .btn{display:block;width:100%;text-align:center;border:0;cursor:pointer;
+    background:linear-gradient(90deg,#ff7a2d,#ff9a4d);color:#1a0f06;font-weight:800;font-size:14px;
+    padding:13px;border-radius:13px;margin-top:6px;font-family:inherit}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);font-weight:700}
+  .btn.sm{padding:9px;font-size:13px;border-radius:10px;width:auto}
+  .btn.danger{background:transparent;border:1px solid #7a3a2a;color:#e08a70;font-weight:700}
+  .btn:disabled{opacity:.45;cursor:default}
+
+  .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 9px;font-weight:700}
+
+  .room{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .room .l .t{font-size:15px;font-weight:700}
+  .room .l .m{font-size:12px;color:var(--muted);margin-top:3px}
+  .timer{font-size:52px;font-weight:800;color:var(--warm);text-align:center;font-variant-numeric:tabular-nums;margin:8px 0 4px}
+
+  .sentbox{width:100%;min-height:84px;resize:none;border-radius:12px;border:1px solid var(--line);
+    background:var(--field);color:var(--text);padding:12px;font-size:14px;line-height:1.6;
+    font-family:inherit;margin-top:10px}
+  .sentbox:focus{outline:1px solid var(--ember);border-color:var(--ember)}
+  .sent-hint{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
+  .segs{display:flex;gap:6px}
+  .seg{border:1px solid var(--line);background:#1c140d;color:var(--muted);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:700;font-family:inherit}
+  .seg.active{color:#1a0f06;background:linear-gradient(90deg,#ff7a2d,#ff9a4d);border-color:transparent}
+  .inp{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--text);padding:10px 12px;font-size:13px;font-family:inherit;margin-top:8px}
+  .inp:focus{outline:1px solid var(--ember);border-color:var(--ember)}
+  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:40;
+    background:#2c1e12;border:1px solid var(--ember);color:var(--warm);font-size:13px;font-weight:700;
+    padding:10px 16px;border-radius:999px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+  .toast.show{opacity:1}
+
+  .qcard{border-radius:20px;padding:20px 18px;margin-bottom:12px;
+    background:linear-gradient(160deg,#2c1e12,#191109);border:1px solid rgba(255,138,61,.35)}
+  .qcard .q{font-size:16px;line-height:1.65;font-weight:600;color:#f7ecdf;word-break:keep-all}
+  .qcard .src{font-size:12px;color:var(--muted);margin-top:14px}
+  .qcard .acts{display:flex;gap:8px;margin-top:14px}
+  .iconbtn{flex:1;border:1px solid var(--line);background:#1c140d;color:var(--text);border-radius:10px;padding:9px 8px;font-size:12px;cursor:pointer;font-weight:600;font-family:inherit}
+  .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;line-height:1.6}
+
+  .tabbar{height:64px;flex-shrink:0;background:var(--tabbg);border-top:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-around;
+    padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 6px)}
+  .tab{flex:1;text-align:center;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600;padding-top:8px}
+  .tab .ic{display:flex;justify-content:center;margin-bottom:4px;opacity:.6;transition:opacity .2s}
+  .tab .ic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .tab.active{color:var(--ember2)}
+  .tab.active .ic{opacity:1;filter:drop-shadow(0 0 7px rgba(255,138,61,.55))}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div><span class="brand">북메이트</span><span class="beta">BETA</span></div>
+    <div id="clockNow"></div>
+  </div>
+
+  <div class="screens">
+
+    <!-- 1. 10분 룸 -->
+    <section class="screen active" id="s-room">
+      <div class="scr-title">10분 독서방</div>
+      <div class="scr-sub">정해진 시간에 같이 켜고, 각자의 책을 10분. 끝나면 문장 하나.</div>
+
+      <div class="label" style="margin-top:4px">오늘의 시간표 — 각자의 책, 같은 10분</div>
+      <div class="live" id="presenceLine" style="display:none"><span class="dot"></span><span id="presenceText"></span></div>
+      <div id="slotBox"></div>
+
+      <div class="card" id="timerCard" style="display:none">
+        <div style="text-align:center;font-size:12px;color:var(--muted)" id="timerCap">집중 중</div>
+        <div class="timer" id="timerView">10:00</div>
+        <div style="text-align:center;font-size:12px;color:var(--muted)">책을 펴세요. 끝나면 알림이 와요 — 화면은 켠 채 엎어두면 돼요.</div>
+        <button class="btn ghost sm" style="width:100%;margin-top:12px" onclick="finishSprint(false)">여기까지 읽고 마무리 →</button>
+      </div>
+
+      <div class="card glow" id="sentenceCard" style="display:none">
+        <div style="font-size:15px;font-weight:700">오늘의 한 문장 ✍️</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">방금 읽은 부분에서 마음에 남은 문장 하나만 남겨요.</div>
+        <textarea class="sentbox" id="sentInput" maxlength="200" placeholder="예) 행복은 강도가 아니라 빈도다."></textarea>
+        <input class="inp" id="quoteBook" maxlength="30" placeholder="어느 책이에요?" />
+        <button class="btn" onclick="saveSentence()">문장 남기고 오늘 독서 완료</button>
+        <div class="sent-hint">문장은 이 기기에만 저장돼요. 서버로 전송되지 않아요.</div>
+      </div>
+
+      <button class="btn ghost" id="soloBtn" onclick="startTimer()">시간이 안 맞아요? 혼자 조용히 10분 시작하기</button>
+
+      <div class="card" id="chatCard" style="display:none;margin-top:13px">
+        <div class="room">
+          <div class="l">
+            <div class="t">베타 오픈채팅</div>
+            <div class="m">세션 후 문장을 나누고 싶다면 — 참여는 자유예요</div>
+          </div>
+          <a class="btn sm" id="chatLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none">입장</a>
+        </div>
+      </div>
+
+      <div class="label">설정</div>
+      <div class="card" style="padding:13px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div>
+            <div style="font-size:14px;font-weight:700">종료 알림</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">10분이 끝난 걸 알 수 있게</div>
+          </div>
+          <div class="segs" id="notifSegs">
+            <button class="seg" data-n="vibe" onclick="setNotif('vibe')">진동</button>
+            <button class="seg" data-n="sound" onclick="setNotif('sound')">소리</button>
+            <button class="seg" data-n="silent" onclick="setNotif('silent')">무음</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="padding:13px 16px">
+        <div style="font-size:14px;font-weight:700">닉네임</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">문장 카드에 적히는 이름 — 이 기기에만 저장돼요</div>
+        <input class="inp" id="nickInput" maxlength="12" placeholder="예) 시온" />
+        <button class="btn sm ghost" style="width:100%;margin-top:8px" onclick="saveNick()">저장</button>
+      </div>
+    </section>
+
+    <!-- 2. 내 문장 -->
+    <section class="screen" id="s-quotes">
+      <div class="scr-title">내 문장</div>
+      <div class="scr-sub">읽은 시간이 아니라, 읽은 문장이 남아요.</div>
+      <div id="quoteList"></div>
+      <div class="hint" id="quoteEmpty">아직 없어요 — 10분 룸을 끝내면 첫 문장이 생겨요.</div>
+      <div class="label" id="backupLabel" style="display:none">백업</div>
+      <button class="btn ghost" id="copyAllBtn" style="display:none" onclick="copyAll()">문장 전체 텍스트로 복사</button>
+      <button class="btn danger" id="wipeBtn" style="display:none" onclick="wipeAll(this)">기록 전체 삭제</button>
+    </section>
+
+    <!-- 3. 내 기록 -->
+    <section class="screen" id="s-home">
+      <div class="scr-title">내 기록</div>
+      <div class="scr-sub">어제보다 나은 오늘. 행복은 강도가 아니라 빈도 — 작게, 자주.</div>
+
+      <div class="card glow" style="text-align:center">
+        <div class="label" style="margin:0 0 6px">내가 모은 문장</div>
+        <div class="bignum"><span id="dashQuotes">0</span><span> 개</span></div>
+      </div>
+
+      <div class="card">
+        <div class="temp-row">
+          <div>
+            <div class="label" style="margin:0 0 4px">이번 주 세션</div>
+            <div style="font-size:12px;color:var(--muted)" id="dashWeekLine"></div>
+          </div>
+          <div class="temp-val" id="dashWeekCount">0회</div>
+        </div>
+        <div class="segbar" id="dashWeekBar"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="label" style="margin:0 0 4px">함께 읽은 시간</div>
+            <div class="statval" id="dashTimeLine">0<span>분</span></div>
+          </div>
+          <button class="btn sm" onclick="go('room')">10분 더하기</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:13px 16px">
+        <div style="font-size:12px;color:var(--muted);line-height:1.7">
+          문장과 기록은 이 기기 안에만 저장돼요. "지금 읽는 중" 표시를 위해
+          닉네임과 접속 상태만 잠시 공유되고, 어디에도 저장되지 않아요.
+          <a href="../privacy.html" style="color:var(--ember2)">개인정보처리방침</a>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="toast" id="toastEl"></div>
+
+  <nav class="tabbar">
+    <div class="tab active" data-s="room" onclick="go('room')"><span class="ic"><svg viewBox="0 0 24 24"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg></span>10분 룸</div>
+    <div class="tab" data-s="quotes" onclick="go('quotes')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v13H8l-4 4z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="12" x2="13" y2="12"/></svg></span>내 문장</div>
+    <div class="tab" data-s="home" onclick="go('home')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span>내 기록</div>
+  </nav>
+
+<script>
+  'use strict';
+  // ================== 설정 ==================
+  // 오픈채팅 URL을 넣으면 앱에 입장 버튼이 생겨요. 비워두면 버튼이 숨겨져요.
+  var OPENCHAT_URL = '';
+  // 문장 카드 하단에 찍히는 서비스 주소 — 카드가 공유될 때마다 유입 링크가 돼요.
+  var SITE_URL = 'youngatheart-ai.github.io/bookmate';
+  // 실시간 "지금 N명이 읽는 중" — Supabase 프로젝트 값을 넣으면 켜져요. 비우면 기능이 숨겨져요.
+  // 전송되는 것: 닉네임(선택)과 접속 상태뿐. 문장·기록은 절대 서버로 가지 않아요.
+  var SUPABASE_URL = '';
+  var SUPABASE_ANON_KEY = '';
+  // 시간표 고정 슬롯 (v3 확정 결정 3). 시작부터 60분 운영, 종료 10분 전 입장 마감.
+  var SLOTS = [
+    { name: '출근길 방', h: 8,  m: 30 },
+    { name: '점심 방',   h: 13, m: 0  },
+    { name: '밤 10시 방', h: 22, m: 0  }
+  ];
+  var SESSION_SEC = 600;
+  // 테스트용: ?t=초 로 세션 길이 축소 (예: app/?t=15)
+  (function(){
+    var m = /[?&]t=(\d{1,3})\b/.exec(location.search);
+    if (m) SESSION_SEC = Math.max(5, parseInt(m[1], 10));
+  })();
+
+  // ================== 상태 (localStorage 전용 — 외부 전송 없음) ==================
+  var DKEY = 'bm_app_v1';
+  function todayKey(){ return new Date().toDateString(); }
+  function loadState(){
+    try {
+      var s = JSON.parse(localStorage.getItem(DKEY)) || {};
+      return { quotes: s.quotes || [], readDate: s.readDate || null, sessions: s.sessions || [],
+               notif: s.notif || 'vibe', nick: s.nick || '', endAt: s.endAt || null };
+    } catch(e){ return { quotes:[], readDate:null, sessions:[], notif:'vibe', nick:'', endAt:null }; }
+  }
+  function saveState(){ try { localStorage.setItem(DKEY, JSON.stringify(state)); } catch(e){} }
+  var state = loadState();
+  function readToday(){ return state.readDate === todayKey(); }
+  function weekStart(offsetWeeks){
+    var d = new Date(); var day = (d.getDay()+6)%7; // 월요일 시작
+    d.setHours(0,0,0,0); d.setDate(d.getDate() - day - (offsetWeeks||0)*7);
+    return d.getTime();
+  }
+
+  // ================== 화면 전환 ==================
+  function go(name){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById('s-'+name).classList.add('active');
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.s===name); });
+    document.querySelector('.screens').scrollTop = 0;
+  }
+
+  var toastT;
+  function toast(msg){
+    var el = document.getElementById('toastEl');
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  }
+
+  // ================== 시간표 (실제 시계 기준 — 지어내는 숫자 없음) ==================
+  function slotTimes(slot){
+    var start = new Date(); start.setHours(slot.h, slot.m, 0, 0);
+    return { start: start.getTime(), close: start.getTime() + 50*60000, end: start.getTime() + 60*60000 };
+  }
+  function two(n){ return (n<10?'0':'')+n; }
+  function hm(ts){ var d = new Date(ts); return two(d.getHours())+':'+two(d.getMinutes()); }
+  function renderSlots(){
+    var now = Date.now();
+    var box = document.getElementById('slotBox');
+    box.innerHTML = '';
+    var openSlot = null, nextSlot = null, nextStart = Infinity;
+    SLOTS.forEach(function(s){
+      var t = slotTimes(s);
+      if (now >= t.start && now < t.close) openSlot = { s:s, t:t };
+      var st = t.start < now ? t.start + 86400000 : t.start; // 오늘 지났으면 내일
+      if (st < nextStart){ nextStart = st; nextSlot = s; }
+    });
+    SLOTS.forEach(function(s){
+      var t = slotTimes(s);
+      var isOpen = openSlot && openSlot.s === s;
+      var card = document.createElement('div');
+      card.className = 'card' + (isOpen ? ' glow' : '');
+      var head = '';
+      if (isOpen){
+        head = '<div class="live"><span class="dot"></span>지금 열려 있어요 — 들어온 순간 나의 10분이 시작돼요</div>';
+      }
+      var row = document.createElement('div');
+      row.innerHTML = head;
+      var room = document.createElement('div'); room.className = 'room';
+      var l = document.createElement('div'); l.className = 'l';
+      var tEl = document.createElement('div'); tEl.className = 't'; tEl.textContent = s.name;
+      var mEl = document.createElement('div'); mEl.className = 'm';
+      mEl.textContent = hm(t.start) + '–' + hm(t.end) + ' 운영 · 각자의 책 · 대화 없음';
+      l.appendChild(tEl); l.appendChild(mEl);
+      room.appendChild(l);
+      if (isOpen){
+        var btn = document.createElement('button'); btn.className = 'btn sm'; btn.textContent = '지금 입장';
+        btn.onclick = function(){ startTimer(); };
+        room.appendChild(btn);
+      }
+      row.appendChild(room);
+      card.appendChild(row);
+      box.appendChild(card);
+    });
+    // 다음 방 카운트다운
+    if (!openSlot && nextSlot){
+      var mins = Math.max(1, Math.round((nextStart - now) / 60000));
+      var hh = Math.floor(mins/60), mm2 = mins%60;
+      var hint = document.createElement('div'); hint.className = 'hint';
+      hint.textContent = '다음 방 「' + nextSlot.name + '」까지 ' + (hh ? hh+'시간 ' : '') + mm2 + '분 — 그 시간, 다른 사람들도 이 화면을 켭니다.';
+      box.appendChild(hint);
+    }
+    document.getElementById('clockNow').textContent = hm(now);
+  }
+  setInterval(renderSlots, 30000);
+
+  // ================== 10분 타이머 (wall-clock — 백그라운드에도 정확) ==================
+  var tInt = null, wakeLock = null;
+  function requestWake(){
+    if (navigator.wakeLock && navigator.wakeLock.request){
+      navigator.wakeLock.request('screen').then(function(wl){ wakeLock = wl; }).catch(function(){});
+    }
+  }
+  function releaseWake(){
+    if (wakeLock){ try { wakeLock.release(); } catch(e){} wakeLock = null; }
+  }
+  function renderTimer(){
+    var remain = Math.max(0, Math.ceil((state.endAt - Date.now())/1000));
+    var m = String(Math.floor(remain/60)).padStart(2,'0');
+    var s = String(remain%60).padStart(2,'0');
+    document.getElementById('timerView').textContent = m+':'+s;
+    if (remain <= 0){ finishSprint(true); }
+  }
+  function startTimer(){
+    if (state.endAt && state.endAt > Date.now()) return; // 이미 진행 중
+    state.endAt = Date.now() + SESSION_SEC*1000;
+    saveState();
+    showTimerUI();
+    requestWake();
+    trackReading();
+  }
+  function showTimerUI(){
+    document.getElementById('timerCard').style.display = 'block';
+    document.getElementById('sentenceCard').style.display = 'none';
+    document.getElementById('soloBtn').style.display = 'none';
+    clearInterval(tInt);
+    renderTimer();
+    tInt = setInterval(renderTimer, 250);
+    document.getElementById('timerCard').scrollIntoView({ behavior:'smooth' });
+  }
+  function finishSprint(natural){
+    clearInterval(tInt); tInt = null;
+    releaseWake();
+    untrackReading();
+    if (!state.endAt) return;
+    state.endAt = null; saveState();
+    if (natural === true) notifyEnd();
+    document.getElementById('timerView').textContent = '완료 🎉';
+    document.getElementById('sentenceCard').style.display = 'block';
+    document.getElementById('sentenceCard').scrollIntoView({ behavior:'smooth' });
+    document.getElementById('sentInput').focus();
+  }
+  // 백그라운드에서 돌아왔을 때 벽시계 기준 재계산
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible'){
+      renderSlots();
+      if (state.endAt){
+        if (state.endAt <= Date.now()){ showTimerUI(); finishSprint(true); }
+        else { showTimerUI(); requestWake(); trackReading(); }
+      }
+    }
+  });
+
+  // ================== 실시간 접속 표시 (Supabase Presence — 닉네임·접속 상태만, 저장 없음) ==================
+  var presence = { channel: null, count: 0, ready: false, wantTrack: false, tracked: false };
+  var sessId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+    : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
+  function initPresence(){
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+    import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm').then(function(mod){
+      var client = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+      presence.channel = client.channel('reading-room', { config: { presence: { key: sessId } } });
+      presence.channel.on('presence', { event: 'sync' }, function(){
+        var st = presence.channel.presenceState();
+        presence.count = Object.keys(st).length;
+        renderPresence();
+      });
+      presence.channel.subscribe(function(status){
+        if (status === 'SUBSCRIBED'){
+          presence.ready = true;
+          if (presence.wantTrack) trackReading();
+          renderPresence();
+        }
+      });
+    }).catch(function(){ /* 오프라인·차단 시 조용히 비활성 — 앱은 정상 동작 */ });
+  }
+  function trackReading(){
+    presence.wantTrack = true;
+    if (!presence.ready || presence.tracked) return;
+    presence.tracked = true;
+    presence.channel.track({ nick: (state.nick || '독서인').slice(0, 12) }).catch(function(){});
+  }
+  function untrackReading(){
+    presence.wantTrack = false;
+    if (!presence.ready || !presence.tracked) return;
+    presence.tracked = false;
+    presence.channel.untrack().catch(function(){});
+  }
+  function renderPresence(){
+    var line = document.getElementById('presenceLine');
+    var txt = document.getElementById('presenceText');
+    var cap = document.getElementById('timerCap');
+    var others = presence.tracked ? presence.count - 1 : presence.count;
+    if (presence.tracked){
+      cap.textContent = others > 0 ? '지금 나 포함 ' + presence.count + '명이 같이 읽는 중' : '집중 중 — 이 시간의 첫 독서인이에요';
+    } else {
+      cap.textContent = '집중 중';
+    }
+    if (!presence.ready || others <= 0){
+      line.style.display = 'none';
+    } else {
+      line.style.display = 'flex';
+      txt.textContent = '지금 ' + others + '명이 읽는 중';
+    }
+  }
+
+  // ================== 종료 알림 ==================
+  function setNotif(n){ state.notif = n; saveState(); renderNotif(); }
+  function renderNotif(){
+    document.querySelectorAll('#notifSegs .seg').forEach(function(b){
+      b.classList.toggle('active', b.dataset.n === state.notif);
+    });
+  }
+  function playChime(){
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [523.25, 783.99].forEach(function(freq, i){ // C5 → G5
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + i*0.18);
+        g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + i*0.18 + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i*0.18 + 0.5);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime + i*0.18); o.stop(ctx.currentTime + i*0.18 + 0.55);
+      });
+    } catch(e){}
+  }
+  function notifyEnd(){
+    if (state.notif === 'vibe'){
+      if (navigator.vibrate){ navigator.vibrate([200,100,200]); }
+      toast('📳 10분 끝!');
+    } else if (state.notif === 'sound'){
+      playChime(); toast('🔔 10분 끝!');
+    }
+  }
+
+  // ================== 핵심 루프: 문장 저장 ==================
+  function saveSentence(){
+    var input = document.getElementById('sentInput');
+    var q = input.value.trim();
+    if (!q){ toast('한 문장만 남겨주세요 ✍️'); input.focus(); return; }
+    var book = (document.getElementById('quoteBook').value || '').trim();
+    state.quotes.unshift({ q: q, ts: Date.now(), book: book });
+    state.sessions.push({ ts: Date.now() });
+    state.readDate = todayKey();
+    saveState();
+    input.value = '';
+    document.getElementById('sentenceCard').style.display = 'none';
+    document.getElementById('timerCard').style.display = 'none';
+    document.getElementById('soloBtn').style.display = 'block';
+    renderState();
+    go('quotes');
+    toast('오늘 독서 완료! 문장이 내 서재에 쌓였어요 🔥');
+  }
+
+  // ================== 문장 카드 이미지 (canvas → 공유/저장) ==================
+  function wrapText(ctx, text, maxWidth){
+    var lines = [], line = '';
+    for (var i = 0; i < text.length; i++){
+      var test = line + text[i];
+      if (ctx.measureText(test).width > maxWidth && line){
+        lines.push(line); line = text[i];
+      } else { line = test; }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+  function makeCardImage(item, cb){
+    var W = 1080, H = 1350;
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var c = cv.getContext('2d');
+    var grad = c.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#2c1e12'); grad.addColorStop(1, '#15110d');
+    c.fillStyle = grad; c.fillRect(0, 0, W, H);
+    c.strokeStyle = 'rgba(255,138,61,.5)'; c.lineWidth = 6;
+    c.strokeRect(40, 40, W-80, H-80);
+    c.fillStyle = '#ff8a3d';
+    c.font = '700 44px "Pretendard","Apple SD Gothic Neo",sans-serif';
+    c.fillText('“', 100, 240);
+    c.fillStyle = '#f7ecdf';
+    c.font = '600 58px "Pretendard","Apple SD Gothic Neo",sans-serif';
+    var lines = wrapText(c, item.q, W - 220);
+    if (lines.length > 9) { lines = lines.slice(0, 9); lines[8] += '…'; }
+    var startY = Math.max(320, (H - lines.length*88) / 2 - 40);
+    lines.forEach(function(ln, i){ c.fillText(ln, 110, startY + i*88); });
+    c.fillStyle = '#a8978a';
+    c.font = '500 36px "Pretendard","Apple SD Gothic Neo",sans-serif';
+    var d = new Date(item.ts);
+    var who = state.nick ? state.nick : '나';
+    var src = who + (item.book ? ' · ' + item.book : '') + ' · ' + d.getFullYear() + '.' + two(d.getMonth()+1) + '.' + two(d.getDate());
+    c.fillText(src, 110, H - 180);
+    c.fillStyle = '#ffb066';
+    c.font = '800 34px "Pretendard","Apple SD Gothic Neo",sans-serif';
+    c.fillText('📖 북메이트 — 읽은 문장이 남는다', 110, H - 115);
+    c.fillStyle = '#a8978a';
+    c.font = '500 28px "Pretendard","Apple SD Gothic Neo",sans-serif';
+    c.fillText(SITE_URL, 110, H - 70);
+    cv.toBlob(cb, 'image/png');
+  }
+  function shareCard(idx){
+    var item = state.quotes[idx];
+    if (!item) return;
+    makeCardImage(item, function(blob){
+      if (!blob){ toast('카드 생성에 실패했어요'); return; }
+      var file = new File([blob], 'bookmate-quote.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })){
+        navigator.share({ files: [file], title: '북메이트 문장 카드' }).catch(function(){});
+      } else {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'bookmate-quote.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+        toast('카드 이미지를 저장했어요 🖼');
+      }
+    });
+  }
+
+  // ================== 내 문장 서재 ==================
+  function fmtDate(ts){
+    var d = new Date(ts);
+    return (d.toDateString() === todayKey()) ? '오늘' : (d.getMonth()+1) + '/' + d.getDate();
+  }
+  function renderQuotes(){
+    var wrap = document.getElementById('quoteList');
+    wrap.innerHTML = '';
+    state.quotes.forEach(function(item, i){
+      var card = document.createElement('div'); card.className = 'qcard';
+      var qEl = document.createElement('div'); qEl.className = 'q'; qEl.textContent = '"' + item.q + '"';
+      var src = document.createElement('div'); src.className = 'src';
+      src.textContent = (item.book ? item.book + ' · ' : '') + fmtDate(item.ts);
+      var acts = document.createElement('div'); acts.className = 'acts';
+      var share = document.createElement('button'); share.className = 'iconbtn'; share.textContent = '🖼 카드로 공유';
+      share.onclick = function(){ shareCard(i); };
+      var del = document.createElement('button'); del.className = 'iconbtn'; del.textContent = '삭제';
+      del.onclick = function(){
+        state.quotes.splice(i, 1); saveState(); renderState();
+        toast('문장을 지웠어요');
+      };
+      acts.appendChild(share); acts.appendChild(del);
+      card.appendChild(qEl); card.appendChild(src); card.appendChild(acts);
+      wrap.appendChild(card);
+    });
+    var has = state.quotes.length > 0;
+    document.getElementById('quoteEmpty').style.display = has ? 'none' : 'block';
+    document.getElementById('backupLabel').style.display = has ? 'block' : 'none';
+    document.getElementById('copyAllBtn').style.display = has ? 'block' : 'none';
+    document.getElementById('wipeBtn').style.display = has ? 'block' : 'none';
+  }
+  function copyAll(){
+    var text = state.quotes.map(function(it){
+      var d = new Date(it.ts);
+      return '"' + it.q + '" — ' + (it.book || '') + ' (' + d.getFullYear() + '.' + two(d.getMonth()+1) + '.' + two(d.getDate()) + ')';
+    }).join('\n');
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ toast('문장 ' + state.quotes.length + '개를 복사했어요 📋'); },
+        function(){ toast('복사에 실패했어요'); });
+    } else { toast('이 브라우저는 복사를 지원하지 않아요'); }
+  }
+  var wipeArmed = false, wipeT;
+  function wipeAll(btn){
+    if (!wipeArmed){
+      wipeArmed = true;
+      btn.textContent = '정말 삭제할까요? 한 번 더 누르면 지워져요';
+      clearTimeout(wipeT);
+      wipeT = setTimeout(function(){ wipeArmed = false; btn.textContent = '기록 전체 삭제'; }, 4000);
+      return;
+    }
+    wipeArmed = false;
+    var nick = state.nick, notif = state.notif;
+    state = { quotes:[], readDate:null, sessions:[], notif:notif, nick:nick, endAt:null };
+    saveState(); renderState();
+    btn.textContent = '기록 전체 삭제';
+    toast('모든 기록을 지웠어요');
+  }
+
+  // ================== 닉네임 ==================
+  function saveNick(){
+    state.nick = document.getElementById('nickInput').value.trim().slice(0, 12);
+    saveState();
+    toast(state.nick ? '닉네임 저장: ' + state.nick : '닉네임을 비웠어요');
+  }
+
+  // ================== 대시보드 ==================
+  function renderState(){
+    renderQuotes();
+    document.getElementById('dashQuotes').textContent = state.quotes.length;
+    var thisWeek = state.sessions.filter(function(s){ return s.ts >= weekStart(0); }).length;
+    var lastWeek = state.sessions.filter(function(s){ return s.ts >= weekStart(1) && s.ts < weekStart(0); }).length;
+    document.getElementById('dashWeekCount').textContent = thisWeek + '회';
+    document.getElementById('dashWeekLine').textContent =
+      lastWeek === 0 && thisWeek === 0 ? '첫 10분이 가장 큰 한 걸음이에요'
+      : thisWeek >= lastWeek ? '지난주 ' + lastWeek + '회 → 빈도가 쌓이고 있어요'
+      : '지난주 ' + lastWeek + '회 · 다시 불씨 살리면 돼요';
+    var segs2 = document.getElementById('dashWeekBar').children;
+    for (var k = 0; k < segs2.length; k++){ segs2[k].className = k < Math.min(thisWeek, 5) ? 'on' : ''; }
+    var mins = Math.round(state.sessions.length * SESSION_SEC / 60);
+    document.getElementById('dashTimeLine').innerHTML = mins + '<span>분</span><span> · ' + state.sessions.length + '세션</span>';
+  }
+
+  // ================== 초기화 ==================
+  (function init(){
+    if (OPENCHAT_URL){
+      document.getElementById('chatCard').style.display = 'block';
+      document.getElementById('chatLink').href = OPENCHAT_URL;
+    }
+    document.getElementById('nickInput').value = state.nick;
+    renderNotif();
+    renderSlots();
+    renderState();
+    initPresence();
+    // 진행 중이던 세션 복원 (새로고침·재실행에도 10분은 10분)
+    if (state.endAt){
+      if (state.endAt <= Date.now()){ showTimerUI(); finishSprint(true); }
+      else { showTimerUI(); requestWake(); trackReading(); }
+    }
+    if ('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    }
+  })();
+</script>
+</body>
+</html>

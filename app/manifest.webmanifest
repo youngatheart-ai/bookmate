@@ -1,0 +1,17 @@
+{
+  "name": "북메이트 — 10분 독서방",
+  "short_name": "북메이트",
+  "description": "정해진 시간에 10분, 각자의 책. 읽은 시간이 아니라 읽은 문장이 남는다.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#15110d",
+  "theme_color": "#15110d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

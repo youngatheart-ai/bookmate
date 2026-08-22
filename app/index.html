@@ -539,12 +539,30 @@
   function toggleRoomForm(){
     var f = document.getElementById('roomForm');
     f.style.display = f.style.display === 'none' ? 'block' : 'none';
-    if (f.style.display === 'block'){ f.scrollIntoView({ behavior: 'smooth' }); document.getElementById('roomName').focus(); }
+    if (f.style.display === 'block'){
+      document.getElementById('roomTime').value = nextRoomTime(); // 열 때마다 미래 시간으로 갱신
+      f.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('roomName').focus();
+    }
+  }
+  function nextRoomTime(){
+    // 기본값: 지금부터 20분 뒤를 10분 단위로 올림 (지난 시간으로 방을 여는 실수 방지)
+    var d = new Date(Date.now() + 20*60000);
+    d.setMinutes(Math.ceil(d.getMinutes()/10)*10, 0, 0);
+    return two(d.getHours()) + ':' + two(d.getMinutes());
   }
   function createRoom(){
     if (!sb){ toast('연결 준비 중이에요 — 잠시 후 다시'); return; }
     var name = (document.getElementById('roomName').value || '').trim() || '조용한 독서방';
-    var time = document.getElementById('roomTime').value || '19:00';
+    var time = document.getElementById('roomTime').value || nextRoomTime();
+    var mm0 = /^([0-2]?\d):([0-5]\d)/.exec(time);
+    if (mm0){
+      var st = new Date(); st.setHours(+mm0[1], +mm0[2], 0, 0);
+      if (st.getTime() + 60*60000 <= Date.now()){
+        toast('이미 지난 시간이에요 — 지금 이후 시간으로 정해주세요');
+        return;
+      }
+    }
     var lk = 'bm_roomcount_' + isoToday();
     var cnt = parseInt(localStorage.getItem(lk) || '0', 10);
     if (cnt >= 3){ toast('방 개설은 하루 3개까지예요'); return; }

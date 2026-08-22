@@ -135,6 +135,15 @@
 
     <!-- 1. 10분 룸 -->
     <section class="screen active" id="s-room">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 2px">
+        <div style="font-size:13px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span id="greetNick" style="color:var(--ember2);font-weight:700"></span>님, 환영합니다</div>
+        <button class="seg" style="flex-shrink:0" onclick="toggleGreetEdit()">닉네임 수정</button>
+      </div>
+      <div class="card" id="greetEdit" style="display:none;padding:13px 16px">
+        <div style="font-size:12px;color:var(--muted)">문장 카드와 "지금 읽는 중" 명단에 보이는 이름이에요</div>
+        <input class="inp" id="nickInput2" maxlength="12" placeholder="닉네임" />
+        <button class="btn sm" style="width:100%;margin-top:8px" onclick="saveNickTop()">저장</button>
+      </div>
       <div class="scr-title">10분 독서방</div>
       <div class="scr-sub">정해진 시간에 같이 켜고, 각자의 책을 10분. 끝나면 문장 하나.</div>
 
@@ -479,7 +488,7 @@
 
   // ================== 실시간 접속 표시 (Supabase Presence — 닉네임·접속 상태만, 저장 없음) ==================
   var sb = null; // Supabase 클라이언트 (presence + 오늘의 방 시간표 공용)
-  var presence = { channel: null, count: 0, ready: false, wantTrack: false, tracked: false };
+  var presence = { channel: null, count: 0, names: [], ready: false, wantTrack: false, tracked: false };
   var sessId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
     : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
   function initPresence(){
@@ -492,7 +501,15 @@
       presence.channel = client.channel('reading-room', { config: { presence: { key: sessId } } });
       presence.channel.on('presence', { event: 'sync' }, function(){
         var st = presence.channel.presenceState();
-        presence.count = Object.keys(st).length;
+        var keys = Object.keys(st);
+        presence.count = keys.length;
+        // 참여자 명단 수집 (내 세션 키는 분리) — 렌더는 반드시 textContent로만
+        presence.names = [];
+        keys.forEach(function(k){
+          if (k === sessId) return;
+          var meta = st[k] && st[k][0];
+          presence.names.push(String((meta && meta.nick) || '독서인').slice(0, 12));
+        });
         renderPresence();
       });
       presence.channel.subscribe(function(status){
@@ -520,17 +537,29 @@
     var line = document.getElementById('presenceLine');
     var txt = document.getElementById('presenceText');
     var cap = document.getElementById('timerCap');
-    var others = presence.tracked ? presence.count - 1 : presence.count;
+    var names = presence.names || [];      // 나를 뺀 참여자 명단
+    var others = names.length;
+    var total = others + (presence.tracked ? 1 : 0);
+    // 세션 중 타이머 위 문구 — 5명 이하는 이름으로, 그보다 많으면 숫자로
     if (presence.tracked){
-      cap.textContent = others > 0 ? '지금 나 포함 ' + presence.count + '명이 같이 읽는 중' : '집중 중 — 이 시간의 첫 독서인이에요';
+      if (others === 0){
+        cap.textContent = '집중 중 — 이 시간의 첫 독서인이에요';
+      } else if (total <= 5){
+        cap.textContent = names.join(' · ') + '님과 함께 읽는 중';
+      } else {
+        cap.textContent = '지금 나 포함 ' + total + '명이 같이 읽는 중';
+      }
     } else {
       cap.textContent = '집중 중';
     }
+    // 시간표 위 라이브 라인 — 입장 전에도 누가 읽고 있는지 보이게
     if (!presence.ready || others <= 0){
       line.style.display = 'none';
     } else {
       line.style.display = 'flex';
-      txt.textContent = '지금 ' + others + '명이 읽는 중';
+      txt.textContent = others <= 5
+        ? '지금 읽는 중 — ' + names.join(' · ')
+        : '지금 ' + others + '명이 읽는 중';
     }
   }
 
@@ -763,11 +792,40 @@
     toast('모든 기록을 지웠어요');
   }
 
-  // ================== 닉네임 ==================
-  function saveNick(){
-    state.nick = document.getElementById('nickInput').value.trim().slice(0, 12);
+  // ================== 닉네임 (카카오톡식 형용사+명사 자동 생성) ==================
+  var NICK_ADJ = ['조용한','포근한','느긋한','다정한','잔잔한','성실한','새벽의','유쾌한','진지한','씩씩한','낭만적인','호기심많은'];
+  var NICK_NOUN = ['독서가','책벌레','애서가','문장수집가','서재지기','낭독가','다독가','필사가','밑줄러','활자탐험가'];
+  function randomNick(){
+    var a = NICK_ADJ[Math.floor(Math.random()*NICK_ADJ.length)];
+    var n = NICK_NOUN[Math.floor(Math.random()*NICK_NOUN.length)];
+    return (a + ' ' + n).slice(0, 12);
+  }
+  function renderGreet(){
+    document.getElementById('greetNick').textContent = state.nick;
+    document.getElementById('nickInput').value = state.nick;
+    document.getElementById('nickInput2').value = state.nick;
+  }
+  function toggleGreetEdit(){
+    var f = document.getElementById('greetEdit');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block'){ document.getElementById('nickInput2').focus(); }
+  }
+  function applyNick(v){
+    state.nick = (v || '').trim().slice(0, 12) || randomNick();
     saveState();
-    toast(state.nick ? '닉네임 저장: ' + state.nick : '닉네임을 비웠어요');
+    renderGreet();
+    // 세션 중이면 실시간 명단의 이름도 즉시 갱신
+    if (presence.ready && presence.tracked){
+      presence.channel.track({ nick: state.nick }).catch(function(){});
+    }
+    toast('반가워요, ' + state.nick + '님');
+  }
+  function saveNickTop(){
+    applyNick(document.getElementById('nickInput2').value);
+    document.getElementById('greetEdit').style.display = 'none';
+  }
+  function saveNick(){
+    applyNick(document.getElementById('nickInput').value);
   }
 
   // ================== 대시보드 ==================
@@ -796,7 +854,8 @@
       document.getElementById('chatCard').style.display = 'block';
       document.getElementById('chatLink').href = OPENCHAT_URL;
     }
-    document.getElementById('nickInput').value = state.nick;
+    if (!state.nick){ state.nick = randomNick(); saveState(); } // 첫 방문 — 자동 작명
+    renderGreet();
     renderNotif();
     renderSlots();
     renderState();

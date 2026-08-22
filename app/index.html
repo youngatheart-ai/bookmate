@@ -659,6 +659,10 @@
     var q = input.value.trim();
     if (!q){ toast('한 문장만 남겨주세요'); input.focus(); return; }
     var book = (document.getElementById('quoteBook').value || '').trim();
+    if (hasBadWord(q) || hasBadWord(book)){
+      toast('담기 어려운 표현이 있어요 — 문장을 다듬어 주세요');
+      input.focus(); return;
+    }
     state.quotes.unshift({ q: q, ts: Date.now(), book: book });
     state.sessions.push({ ts: Date.now() });
     state.readDate = todayKey();

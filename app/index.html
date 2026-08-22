@@ -422,7 +422,7 @@
     if (!state.endAt) return;
     state.endAt = null; saveState();
     if (natural === true) notifyEnd();
-    document.getElementById('timerView').textContent = '완료 🎉';
+    document.getElementById('timerView').textContent = '완료';
     document.getElementById('sentenceCard').style.display = 'block';
     document.getElementById('sentenceCard').scrollIntoView({ behavior:'smooth' });
     document.getElementById('sentInput').focus();

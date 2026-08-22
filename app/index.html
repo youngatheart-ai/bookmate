@@ -595,6 +595,7 @@
   function createRoom(){
     if (!sb){ toast('연결 준비 중이에요 — 잠시 후 다시'); return; }
     var name = (document.getElementById('roomName').value || '').trim() || '조용한 독서방';
+    if (hasBadWord(name)){ toast('그 방 이름은 쓸 수 없어요 — 다른 이름으로 부탁드려요'); return; }
     var time = document.getElementById('roomTime').value || nextRoomTime();
     var mm0 = /^([0-2]?\d):([0-5]\d)/.exec(time);
     if (mm0){
@@ -794,6 +795,17 @@
     toast('모든 기록을 지웠어요');
   }
 
+  // ================== 금칙어 필터 (닉네임·방 이름 — 남에게 보이는 텍스트만) ==================
+  // 완벽 차단이 목적이 아니라 실수·저강도 어그로 차단이 목적. 최후 방어는 운영 삭제.
+  var BADWORDS = ['시발','씨발','씨팔','시팔','ㅅㅂ','ㅆㅂ','병신','ㅂㅅ','ㅄ','지랄','ㅈㄹ','새끼','ㅅㄲ','좆','존나','ㅈㄴ','니미','느금','꺼져','닥쳐','미친놈','미친년','또라이','걸레','창녀','창놈','보지','자지','불알','섹스','씹','엠창','애미','틀딱','급식충','한남충','김치녀'];
+  function hasBadWord(text){
+    var t = String(text || '').replace(/[^가-힣ㄱ-ㅎa-zA-Z]/g, ''); // 공백·숫자·기호 우회 무력화
+    for (var i = 0; i < BADWORDS.length; i++){
+      if (t.indexOf(BADWORDS[i]) > -1) return true;
+    }
+    return false;
+  }
+
   // ================== 닉네임 (카카오톡식 형용사+명사 자동 생성) ==================
   var NICK_ADJ = ['조용한','포근한','느긋한','다정한','잔잔한','성실한','새벽의','유쾌한','진지한','씩씩한','낭만적인','호기심많은'];
   var NICK_NOUN = ['독서가','책벌레','애서가','문장수집가','서재지기','낭독가','다독가','필사가','밑줄러','활자탐험가'];
@@ -813,6 +825,7 @@
     if (f.style.display === 'block'){ document.getElementById('nickInput2').focus(); }
   }
   function applyNick(v){
+    if (hasBadWord(v)){ toast('그 이름은 쓸 수 없어요 — 다른 이름으로 부탁드려요'); return; }
     state.nick = (v || '').trim().slice(0, 12) || randomNick();
     saveState();
     renderGreet();

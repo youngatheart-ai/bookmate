@@ -138,10 +138,6 @@
       <div class="scr-title">10분 독서방</div>
       <div class="scr-sub">정해진 시간에 같이 켜고, 각자의 책을 10분. 끝나면 문장 하나.</div>
 
-      <div class="label" style="margin-top:4px">오늘의 시간표 — 각자의 책, 같은 10분</div>
-      <div class="live" id="presenceLine" style="display:none"><span class="dot"></span><span id="presenceText"></span></div>
-      <div id="slotBox"></div>
-
       <div class="card" id="timerCard" style="display:none">
         <div style="text-align:center;font-size:12px;color:var(--muted)" id="timerCap">집중 중</div>
         <div class="timer" id="timerView">10:00</div>
@@ -157,6 +153,10 @@
         <button class="btn" onclick="saveSentence()">문장 남기고 오늘 독서 완료</button>
         <div class="sent-hint">문장은 이 기기에만 저장돼요. 서버로 전송되지 않아요.</div>
       </div>
+
+      <div class="label" id="slotLabel" style="margin-top:4px">오늘의 시간표 — 각자의 책, 같은 10분</div>
+      <div class="live" id="presenceLine" style="display:none"><span class="dot"></span><span id="presenceText"></span></div>
+      <div id="slotBox"></div>
 
       <button class="btn ghost" id="openRoomBtn" style="display:none" onclick="toggleRoomForm()">+ 내 방 열기</button>
       <div class="card" id="roomForm" style="display:none">
@@ -427,21 +427,31 @@
     if (remain <= 0){ finishSprint(true); }
   }
   function startTimer(){
-    if (state.endAt && state.endAt > Date.now()) return; // 이미 진행 중
+    if (state.endAt && state.endAt > Date.now()){ showTimerUI(); return; } // 진행 중이면 이어서 보여준다
     state.endAt = Date.now() + SESSION_SEC*1000;
     saveState();
     showTimerUI();
     requestWake();
     trackReading();
   }
+  function focusMode(on){
+    // 세션 중에는 시간표를 걷어내고 타이머만 남긴다 — 스크롤 없이 항상 보이게
+    ['slotLabel','slotBox','openRoomBtn','roomForm'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (on){ el.style.display = 'none'; }
+      else { el.style.display = (id === 'roomForm') ? 'none' : (id === 'openRoomBtn' ? (sb ? 'block' : 'none') : ''); }
+    });
+  }
   function showTimerUI(){
+    focusMode(true);
     document.getElementById('timerCard').style.display = 'block';
     document.getElementById('sentenceCard').style.display = 'none';
     document.getElementById('soloBtn').style.display = 'none';
     clearInterval(tInt);
     renderTimer();
     tInt = setInterval(renderTimer, 250);
-    document.getElementById('timerCard').scrollIntoView({ behavior:'smooth' });
+    document.querySelector('.screens').scrollTop = 0;
   }
   function finishSprint(natural){
     clearInterval(tInt); tInt = null;
@@ -625,6 +635,8 @@
     document.getElementById('sentenceCard').style.display = 'none';
     document.getElementById('timerCard').style.display = 'none';
     document.getElementById('soloBtn').style.display = 'block';
+    focusMode(false);
+    renderSlots();
     renderState();
     go('quotes');
     toast('오늘 독서 완료! 문장이 내 서재에 쌓였어요 🔥');

@@ -155,7 +155,7 @@
       </div>
 
       <div class="card glow" id="sentenceCard" style="display:none">
-        <div style="font-size:15px;font-weight:700">오늘의 한 문장 ✍️</div>
+        <div style="font-size:15px;font-weight:700">오늘의 한 문장</div>
         <div style="font-size:12px;color:var(--muted);margin-top:3px">방금 읽은 부분에서 마음에 남은 문장 하나만 남겨요.</div>
         <textarea class="sentbox" id="sentInput" maxlength="200" placeholder="예) 행복은 강도가 아니라 빈도다."></textarea>
         <input class="inp" id="quoteBook" maxlength="30" placeholder="어느 책이에요?" />
@@ -646,9 +646,9 @@
   function notifyEnd(){
     if (state.notif === 'vibe'){
       if (navigator.vibrate){ navigator.vibrate([200,100,200]); }
-      toast('📳 10분 끝!');
+      toast('10분이 끝났어요');
     } else if (state.notif === 'sound'){
-      playChime(); toast('🔔 10분 끝!');
+      playChime(); toast('10분이 끝났어요');
     }
   }
 
@@ -656,7 +656,7 @@
   function saveSentence(){
     var input = document.getElementById('sentInput');
     var q = input.value.trim();
-    if (!q){ toast('한 문장만 남겨주세요 ✍️'); input.focus(); return; }
+    if (!q){ toast('한 문장만 남겨주세요'); input.focus(); return; }
     var book = (document.getElementById('quoteBook').value || '').trim();
     state.quotes.unshift({ q: q, ts: Date.now(), book: book });
     state.sessions.push({ ts: Date.now() });
@@ -670,7 +670,7 @@
     renderSlots();
     renderState();
     go('quotes');
-    toast('오늘 독서 완료! 문장이 내 서재에 쌓였어요 🔥');
+    toast('오늘 독서 완료 — 문장이 내 서재에 쌓였어요');
   }
 
   // ================== 문장 카드 이미지 (canvas → 공유/저장) ==================
@@ -711,7 +711,7 @@
     c.fillText(src, 110, H - 180);
     c.fillStyle = '#ffb066';
     c.font = '800 34px "Pretendard","Apple SD Gothic Neo",sans-serif';
-    c.fillText('📖 북메이트 — 읽은 문장이 남는다', 110, H - 115);
+    c.fillText('북메이트 — 읽은 문장이 남는다', 110, H - 115);
     c.fillStyle = '#a8978a';
     c.font = '500 28px "Pretendard","Apple SD Gothic Neo",sans-serif';
     c.fillText(SITE_URL, 110, H - 70);
@@ -731,7 +731,7 @@
         a.download = 'bookmate-quote.png';
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
-        toast('카드 이미지를 저장했어요 🖼');
+        toast('카드 이미지를 저장했어요');
       }
     });
   }
@@ -750,7 +750,7 @@
       var src = document.createElement('div'); src.className = 'src';
       src.textContent = (item.book ? item.book + ' · ' : '') + fmtDate(item.ts);
       var acts = document.createElement('div'); acts.className = 'acts';
-      var share = document.createElement('button'); share.className = 'iconbtn'; share.textContent = '🖼 카드로 공유';
+      var share = document.createElement('button'); share.className = 'iconbtn'; share.textContent = '카드로 공유';
       share.onclick = function(){ shareCard(i); };
       var del = document.createElement('button'); del.className = 'iconbtn'; del.textContent = '삭제';
       del.onclick = function(){
@@ -773,7 +773,7 @@
       return '"' + it.q + '" — ' + (it.book || '') + ' (' + d.getFullYear() + '.' + two(d.getMonth()+1) + '.' + two(d.getDate()) + ')';
     }).join('\n');
     if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(function(){ toast('문장 ' + state.quotes.length + '개를 복사했어요 📋'); },
+      navigator.clipboard.writeText(text).then(function(){ toast('문장 ' + state.quotes.length + '개를 복사했어요'); },
         function(){ toast('복사에 실패했어요'); });
     } else { toast('이 브라우저는 복사를 지원하지 않아요'); }
   }

@@ -282,6 +282,7 @@
     <div class="tab" data-s="home" onclick="go('home')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span>내 기록</div>
   </nav>
 
+<script src="badwords.js"></script>
 <script>
   'use strict';
   // ================== 설정 ==================
@@ -799,9 +800,8 @@
     toast('모든 기록을 지웠어요');
   }
 
-  // ================== 금칙어 필터 (닉네임·방 이름 — 남에게 보이는 텍스트만) ==================
-  // 완벽 차단이 목적이 아니라 실수·저강도 어그로 차단이 목적. 최후 방어는 운영 삭제.
-  var BADWORDS = ['시발','씨발','씨팔','시팔','ㅅㅂ','ㅆㅂ','병신','ㅂㅅ','ㅄ','지랄','ㅈㄹ','새끼','ㅅㄲ','좆','존나','ㅈㄴ','니미','느금','꺼져','닥쳐','미친놈','미친년','또라이','걸레','창녀','창놈','보지','자지','불알','섹스','씹','엠창','애미','틀딱','급식충','한남충','김치녀'];
+  // ================== 금칙어 필터 ==================
+  // 사전은 badwords.js (통합본 xlsx 1,201패턴). 완벽 차단이 아니라 실수·어그로 차단이 목적.
   function hasBadWord(text){
     var t = String(text || '').replace(/[^가-힣ㄱ-ㅎa-zA-Z]/g, ''); // 공백·숫자·기호 우회 무력화
     for (var i = 0; i < BADWORDS.length; i++){
@@ -828,8 +828,13 @@
     f.style.display = f.style.display === 'none' ? 'block' : 'none';
     if (f.style.display === 'block'){ document.getElementById('nickInput2').focus(); }
   }
+  function isReservedNick(v){
+    var t = String(v || '').replace(/[^가-힣ㄱ-ㅎa-zA-Z]/g, '').toLowerCase();
+    return RESERVED_NICKS.some(function(r){ return t.indexOf(r) > -1; });
+  }
   function applyNick(v){
     if (hasBadWord(v)){ toast('그 이름은 쓸 수 없어요 — 다른 이름으로 부탁드려요'); return; }
+    if (isReservedNick(v)){ toast('운영자로 오해될 수 있는 이름이에요 — 다른 이름으로 부탁드려요'); return; }
     state.nick = (v || '').trim().slice(0, 12) || randomNick();
     saveState();
     renderGreet();

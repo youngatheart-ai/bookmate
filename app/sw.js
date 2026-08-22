@@ -1,9 +1,10 @@
 /* 북메이트 서비스워커 — 오프라인 캐시 (앱 셸만, 외부 요청 없음) */
 'use strict';
-var CACHE = 'bookmate-v13';
+var CACHE = 'bookmate-v14';
 var ASSETS = [
   './',
   './index.html',
+  './badwords.js',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',

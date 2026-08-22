@@ -855,10 +855,17 @@
     badge.textContent = readToday() ? '오늘 읽음 ✓' : '';
     badge.style.color = 'var(--ember2)'; badge.style.fontWeight = '700';
     document.getElementById('dashQuotes').textContent = state.quotes.length;
-    // 함께 읽은 시간 — 세션별 실제 경과 시간 합산 (조기 마무리 반영, 구 기록은 10분으로 간주)
+    // 함께 읽은 시간 — 세션별 실제 경과 시간 합산, 초 단위 표시 (구 기록은 10분으로 간주)
     var totalSec = state.sessions.reduce(function(a, s){ return a + (s.dur || 600); }, 0);
-    var mins = Math.round(totalSec / 60);
-    document.getElementById('dashTimeLine').innerHTML = mins + '<span>분</span><span> · ' + state.sessions.length + '세션</span>';
+    var timeStr;
+    if (totalSec >= 3600){
+      timeStr = Math.floor(totalSec/3600) + '<span>시간</span> ' + Math.floor((totalSec%3600)/60) + '<span>분</span>';
+    } else if (totalSec >= 60){
+      timeStr = Math.floor(totalSec/60) + '<span>분</span> ' + (totalSec%60) + '<span>초</span>';
+    } else {
+      timeStr = totalSec + '<span>초</span>';
+    }
+    document.getElementById('dashTimeLine').innerHTML = timeStr + '<span> · ' + state.sessions.length + '세션</span>';
     // 연속 참여 (하루 1회 이상 = 1일, 건너뛰면 리셋)
     var st = streakDays();
     document.getElementById('dashStreak').textContent = st;

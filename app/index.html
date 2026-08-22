@@ -151,6 +151,17 @@
         <div class="sent-hint">문장은 이 기기에만 저장돼요. 서버로 전송되지 않아요.</div>
       </div>
 
+      <button class="btn ghost" id="openRoomBtn" style="display:none" onclick="toggleRoomForm()">+ 내 방 열기</button>
+      <div class="card" id="roomForm" style="display:none">
+        <div style="font-size:15px;font-weight:700">내 방 열기</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">내가 읽으려고 여는 방이에요. 시작 시각부터 1시간 운영되고, 그 사이 언제든 들어와 10분을 읽어요.</div>
+        <input class="inp" id="roomName" maxlength="20" placeholder="방 이름 (예: 퇴근길 소설방)" />
+        <div class="label" style="margin:10px 0 4px">시작 시간</div>
+        <input class="inp" id="roomTime" type="time" value="19:00" style="margin-top:0" />
+        <button class="btn" onclick="createRoom()">이 시간에 방 올리기</button>
+        <div class="sent-hint">방은 오늘 시간표에 올라가고, 북메이트를 쓰는 모두에게 보여요.</div>
+      </div>
+
       <button class="btn ghost" id="soloBtn" onclick="startTimer()">시간이 안 맞아요? 혼자 조용히 10분 시작하기</button>
 
       <div class="card" id="chatCard" style="display:none;margin-top:13px">
@@ -316,29 +327,37 @@
     var now = Date.now();
     var box = document.getElementById('slotBox');
     box.innerHTML = '';
-    var openSlot = null, nextSlot = null, nextStart = Infinity;
-    SLOTS.forEach(function(s){
-      var t = slotTimes(s);
-      if (now >= t.start && now < t.close) openSlot = { s:s, t:t };
-      var st = t.start < now ? t.start + 86400000 : t.start; // 오늘 지났으면 내일
-      if (st < nextStart){ nextStart = st; nextSlot = s; }
+    // 고정 슬롯 + 오늘 사용자 방을 하나의 시간표로 병합
+    var entries = [];
+    SLOTS.forEach(function(s){ entries.push({ name: s.name, h: s.h, m: s.m, fixed: true }); });
+    userRooms.forEach(function(r){
+      var mm = /^([0-2]?\d):([0-5]\d)/.exec(r.start_hm || '');
+      if (!mm) return;
+      entries.push({ name: r.name || '조용한 독서방', h: +mm[1], m: +mm[2], fixed: false, nick: r.nick });
     });
-    SLOTS.forEach(function(s){
-      var t = slotTimes(s);
-      var isOpen = openSlot && openSlot.s === s;
+    entries.forEach(function(e){ e.t = slotTimes(e); });
+    entries.sort(function(a, b){ return a.t.start - b.t.start; });
+    var anyOpen = false, nextStart = Infinity, nextName = null;
+    entries.forEach(function(e){
+      if (now >= e.t.start && now < e.t.close) anyOpen = true;
+      var st = e.t.start < now ? (e.fixed ? e.t.start + 86400000 : Infinity) : e.t.start; // 고정 슬롯만 내일로 이월
+      if (st < nextStart){ nextStart = st; nextName = e.name; }
+    });
+    entries.forEach(function(e){
+      var isOpen = now >= e.t.start && now < e.t.close;
+      if (!e.fixed && now >= e.t.end) return; // 끝난 사용자 방은 시간표에서 내림
       var card = document.createElement('div');
       card.className = 'card' + (isOpen ? ' glow' : '');
-      var head = '';
-      if (isOpen){
-        head = '<div class="live"><span class="dot"></span>지금 열려 있어요 — 들어온 순간 나의 10분이 시작돼요</div>';
-      }
       var row = document.createElement('div');
-      row.innerHTML = head;
+      if (isOpen){
+        row.innerHTML = '<div class="live"><span class="dot"></span>지금 열려 있어요 — 들어온 순간 나의 10분이 시작돼요</div>';
+      }
       var room = document.createElement('div'); room.className = 'room';
       var l = document.createElement('div'); l.className = 'l';
-      var tEl = document.createElement('div'); tEl.className = 't'; tEl.textContent = s.name;
+      var tEl = document.createElement('div'); tEl.className = 't'; tEl.textContent = e.name;
       var mEl = document.createElement('div'); mEl.className = 'm';
-      mEl.textContent = hm(t.start) + '–' + hm(t.end) + ' 운영 · 각자의 책 · 대화 없음';
+      mEl.textContent = hm(e.t.start) + '–' + hm(e.t.end) + ' 운영 · 각자의 책 · ' +
+        (e.fixed ? '대화 없음' : (e.nick || '독서인') + '님이 연 방');
       l.appendChild(tEl); l.appendChild(mEl);
       room.appendChild(l);
       if (isOpen){
@@ -351,11 +370,11 @@
       box.appendChild(card);
     });
     // 다음 방 카운트다운
-    if (!openSlot && nextSlot){
+    if (!anyOpen && nextName){
       var mins = Math.max(1, Math.round((nextStart - now) / 60000));
       var hh = Math.floor(mins/60), mm2 = mins%60;
       var hint = document.createElement('div'); hint.className = 'hint';
-      hint.textContent = '다음 방 「' + nextSlot.name + '」까지 ' + (hh ? hh+'시간 ' : '') + mm2 + '분 — 그 시간, 다른 사람들도 이 화면을 켭니다.';
+      hint.textContent = '다음 방 「' + nextName + '」까지 ' + (hh ? hh+'시간 ' : '') + mm2 + '분 — 그 시간, 다른 사람들도 이 화면을 켭니다.';
       box.appendChild(hint);
     }
     document.getElementById('clockNow').textContent = hm(now);
@@ -412,6 +431,7 @@
   document.addEventListener('visibilitychange', function(){
     if (document.visibilityState === 'visible'){
       renderSlots();
+      refreshRooms();
       if (state.endAt){
         if (state.endAt <= Date.now()){ showTimerUI(); finishSprint(true); }
         else { showTimerUI(); requestWake(); trackReading(); }
@@ -420,6 +440,7 @@
   });
 
   // ================== 실시간 접속 표시 (Supabase Presence — 닉네임·접속 상태만, 저장 없음) ==================
+  var sb = null; // Supabase 클라이언트 (presence + 오늘의 방 시간표 공용)
   var presence = { channel: null, count: 0, ready: false, wantTrack: false, tracked: false };
   var sessId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
     : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
@@ -427,6 +448,9 @@
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
     import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm').then(function(mod){
       var client = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+      sb = client;
+      document.getElementById('openRoomBtn').style.display = 'block';
+      refreshRooms();
       presence.channel = client.channel('reading-room', { config: { presence: { key: sessId } } });
       presence.channel.on('presence', { event: 'sync' }, function(){
         var st = presence.channel.presenceState();
@@ -470,6 +494,42 @@
       line.style.display = 'flex';
       txt.textContent = '지금 ' + others + '명이 읽는 중';
     }
+  }
+
+  // ================== 내 방 열기 (시간표 등록형 — 모두에게 보이는 오늘의 방) ==================
+  var userRooms = [];
+  function isoToday(){ var d = new Date(); return d.getFullYear() + '-' + two(d.getMonth()+1) + '-' + two(d.getDate()); }
+  function refreshRooms(){
+    if (!sb) return;
+    Promise.resolve(
+      sb.from('rooms').select('name,start_hm,nick').eq('day', isoToday()).order('start_hm').limit(30)
+    ).then(function(res){
+      if (res && res.data){ userRooms = res.data; renderSlots(); }
+    }).catch(function(){ /* 네트워크 실패 시 기존 시간표 유지 */ });
+  }
+  setInterval(refreshRooms, 60000);
+  function toggleRoomForm(){
+    var f = document.getElementById('roomForm');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block'){ f.scrollIntoView({ behavior: 'smooth' }); document.getElementById('roomName').focus(); }
+  }
+  function createRoom(){
+    if (!sb){ toast('연결 준비 중이에요 — 잠시 후 다시'); return; }
+    var name = (document.getElementById('roomName').value || '').trim() || '조용한 독서방';
+    var time = document.getElementById('roomTime').value || '19:00';
+    var lk = 'bm_roomcount_' + isoToday();
+    var cnt = parseInt(localStorage.getItem(lk) || '0', 10);
+    if (cnt >= 3){ toast('방 개설은 하루 3개까지예요'); return; }
+    Promise.resolve(
+      sb.from('rooms').insert({ day: isoToday(), start_hm: time, name: name.slice(0, 20), nick: (state.nick || '독서인').slice(0, 12) })
+    ).then(function(res){
+      if (res && res.error){ toast('방 올리기에 실패했어요 — 잠시 후 다시'); return; }
+      try { localStorage.setItem(lk, String(cnt + 1)); } catch(e){}
+      document.getElementById('roomName').value = '';
+      document.getElementById('roomForm').style.display = 'none';
+      toast('방이 모두의 시간표에 올라갔어요 — ' + time + ' 「' + name + '」');
+      refreshRooms();
+    }).catch(function(){ toast('방 올리기에 실패했어요 — 잠시 후 다시'); });
   }
 
   // ================== 종료 알림 ==================

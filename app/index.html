@@ -228,17 +228,6 @@
       </div>
 
       <div class="card">
-        <div class="temp-row">
-          <div>
-            <div class="label" style="margin:0 0 4px">이번 주 세션</div>
-            <div style="font-size:12px;color:var(--muted)" id="dashWeekLine"></div>
-          </div>
-          <div class="temp-val" id="dashWeekCount">0회</div>
-        </div>
-        <div class="segbar" id="dashWeekBar"><i></i><i></i><i></i><i></i><i></i></div>
-      </div>
-
-      <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
             <div class="label" style="margin:0 0 4px">함께 읽은 시간</div>
@@ -328,11 +317,6 @@
   function saveState(){ try { localStorage.setItem(DKEY, JSON.stringify(state)); } catch(e){} }
   var state = loadState();
   function readToday(){ return state.readDate === todayKey(); }
-  function weekStart(offsetWeeks){
-    var d = new Date(); var day = (d.getDay()+6)%7; // 월요일 시작
-    d.setHours(0,0,0,0); d.setDate(d.getDate() - day - (offsetWeeks||0)*7);
-    return d.getTime();
-  }
 
   // ================== 화면 전환 ==================
   function go(name){
@@ -871,15 +855,6 @@
     badge.textContent = readToday() ? '오늘 읽음 ✓' : '';
     badge.style.color = 'var(--ember2)'; badge.style.fontWeight = '700';
     document.getElementById('dashQuotes').textContent = state.quotes.length;
-    var thisWeek = state.sessions.filter(function(s){ return s.ts >= weekStart(0); }).length;
-    var lastWeek = state.sessions.filter(function(s){ return s.ts >= weekStart(1) && s.ts < weekStart(0); }).length;
-    document.getElementById('dashWeekCount').textContent = thisWeek + '회';
-    document.getElementById('dashWeekLine').textContent =
-      lastWeek === 0 && thisWeek === 0 ? '첫 10분이 가장 큰 한 걸음이에요'
-      : thisWeek >= lastWeek ? '지난주 ' + lastWeek + '회 → 빈도가 쌓이고 있어요'
-      : '지난주 ' + lastWeek + '회 · 다시 불씨 살리면 돼요';
-    var segs2 = document.getElementById('dashWeekBar').children;
-    for (var k = 0; k < segs2.length; k++){ segs2[k].className = k < Math.min(thisWeek, 5) ? 'on' : ''; }
     // 함께 읽은 시간 — 세션별 실제 경과 시간 합산 (조기 마무리 반영, 구 기록은 10분으로 간주)
     var totalSec = state.sessions.reduce(function(a, s){ return a + (s.dur || 600); }, 0);
     var mins = Math.round(totalSec / 60);

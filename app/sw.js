@@ -1,6 +1,6 @@
 /* 북메이트 서비스워커 — 오프라인 캐시 (앱 셸만, 외부 요청 없음) */
 'use strict';
-var CACHE = 'bookmate-v17';
+var CACHE = 'bookmate-v18';
 var ASSETS = [
   './',
   './index.html',
@@ -35,8 +35,10 @@ self.addEventListener('fetch', function (e) {
   if (url.origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request).then(function (res) {
-      var copy = res.clone();
-      caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+      if (res.ok) { // 404·5xx 응답이 정상 캐시를 덮어쓰지 않게
+        var copy = res.clone();
+        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+      }
       return res;
     }).catch(function () {
       return caches.match(e.request, { ignoreSearch: true }).then(function (hit) {

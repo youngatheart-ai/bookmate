@@ -1,0 +1,17 @@
+# Supabase 무료 플랜은 7일간 요청이 없으면 일시정지된다. 주 2회 가벼운 조회로 깨워 둔다.
+name: supabase-keepalive
+on:
+  schedule:
+    - cron: '0 3 * * 1,4'   # 월·목 12:00 KST
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: rooms 1건 조회
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "apikey: sb_publishable_wdqLPEt9V5BPQsLKFIMV8Q_yiSVp4Yo" \
+            "https://wdgvonpejhvrnbngplgn.supabase.co/rest/v1/rooms?select=id&limit=1")
+          echo "status=$code"
+          test "$code" = "200"
